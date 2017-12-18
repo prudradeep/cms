@@ -1,0 +1,19 @@
+<?php
+/*
+*Author:	Pradeep Rajput
+*Email:		prithviraj.rudraksh@gmail.com 
+*Website:	----------
+*Config:	User
+*/
+
+if (! defined('PHINDART')) { die('Access denied'); }
+
+$userConfig=array(
+	// Database Configurations
+	'DB_DRIVER'=>'mysql', //Only supports mysql or sqlite
+	'DB_HOST'=>'%s',
+	'DB_PORT'=>%d,
+	'DB_USER'=>'%s', //Not Required if sqlite
+	'DB_PASS'=>'%s', //Not Required if sqlite,
+	'DB_BASE'=>'%s'
+);

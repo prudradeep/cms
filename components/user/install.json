@@ -1,0 +1,11 @@
+{
+	"name":"Users",
+	"comp_name": "user",
+	"version":1.0,
+	"removable": false,
+	"sqls":[
+		"usertypes",
+		"users",
+		"userrights"
+	]
+}

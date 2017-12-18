@@ -1,0 +1,9 @@
+{
+	"name":"Config",
+	"comp_name": "config",
+	"version":1.0,
+	"removable": false,
+	"sqls":[
+		"settings"
+	]
+}

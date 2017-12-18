@@ -1,0 +1,9 @@
+{
+	"name":"Menu",
+	"comp_name": "menu",
+	"version":1.0,
+	"removable": false,
+	"sqls":[
+		"menus"
+	]
+}
