@@ -52,9 +52,9 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-    <meta name="description" content="Framework: A PHP Framework!">
-    <meta name="keywords" content="PHP Framework,Framework">
-    <title>Framework</title>
+    <meta name="description" content="Phindart: A PHP Framework!">
+    <meta name="keywords" content="Phindart, Phindart PHP Framework,Phindart Framework">
+    <title>Phindart</title>
 
     <!-- Materialize -->
     <link href="./themes/materialize/css/materialize.min.css" rel="stylesheet" />
