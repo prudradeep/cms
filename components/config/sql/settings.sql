@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS `settings` (
   UNIQUE KEY `uniqueness` (`type`, `field`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 
---At the time of installation
+-- At the time of installation
 REPLACE INTO `settings` (`type`,`field`,`value`,`status`) VALUES
  ('global','SESSION_LIFE','1800',1),
  ('global','MAX_EXE_TIME','300',1),
