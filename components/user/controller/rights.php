@@ -15,15 +15,11 @@ class Rights extends Controller{
 		$this->component('menu','navbar','main');
 		$UserTypes = $this->helper->model('usertypes')->select('id','name')->Eq('status',1)->prepare()->execute()->fetchAll();
 		$UserRights = $this->helper->model('userrights')->select('usertype', 'page', 'status')->prepare()->execute()->fetchAll();
-		$rights = [];
-		foreach ($UserRights as $key => $value) {
-			$rights[$value['page']] = json_decode($value['usertype']);
-		}
 		$components = $this->helper->getDir(COMP_PATH);
 		$comps= array();
 		foreach ($components as $key => $value) {
 			foreach ($value['items'][0]['items'] as $k => $v) {
-				$comps[ucfirst($value['name'])][] = ucfirst($v['name']);
+				$comps[ucfirst($value['name'])][ucfirst($v['name'])]['name'] = ucfirst($v['name']);
 			}
 			if(isset($value['items'][1]) && $value['items'][1]['name']=='install'){
 				$comps[ucfirst($value['name'])]['install'] = $value['items'][1]['install'];
@@ -34,6 +30,15 @@ class Rights extends Controller{
 				$comps[ucfirst($value['name'])]['uninstall'] = $value['items'][1]['install'];
 			}
 		}
+		$rights = [];
+		foreach ($UserRights as $key => $value) {
+			$rights[$value['page']] = json_decode($value['usertype']);
+			$exp = explode("/",$value['page']);
+			if(isset($exp[1]))
+				$comps[$exp[0]][$exp[1]]['status'] = $value['status'];
+			else
+				$comps[$exp[0]][$exp[0]]['status'] = $value['status'];
+		}
 		$this->view('rights', ['usertypes'=>$UserTypes, 'comps'=>$comps, 'data'=>$rights, 'url'=>'/rights']);
 	}
 
@@ -41,6 +46,12 @@ class Rights extends Controller{
 		foreach ($_POST as $key => $value) {
 			$data['page'] = $key;
 			$data['pageaccess'] = md5($key);
+			if(array_key_exists("status", $value)){
+				$data['status'] = 1;
+			}else{
+				$data['status'] =0;
+			}
+			unset($value['status']);
 			if(array_key_exists("'all'", $value))
 				$data['usertype'] = json_encode(array('*'));
 			else{
@@ -89,6 +100,14 @@ class Rights extends Controller{
 
 	function uninstall($comp_name=null){
 		if(isset($_SERVER['HTTP_REFERER']) && $_SERVER['HTTP_REFERER']==BASE."user/rights" && $comp_name!==null){
+			$UserRights = $this->helper->model('userrights');
+			try{
+				$UserRights->update(['status'=>0])->Like('page', $comp_name."%")->prepare()->execute();
+			}catch(Exception $e){
+            	echo "SQL Error: ".$e->getMessage();
+            	header('location: '.BASE.'user/rights');
+				exit;
+            }
 			rename(BASE_DIR.DS.COMP_PATH.DS.$comp_name.DS.'uninstall.json', BASE_DIR.DS.COMP_PATH.DS.$comp_name.DS.'install.json');
 			$_SESSION[SESSION_MSG] = 'Component uninstalled successfully!';
 			header('location: '.BASE.'user/rights');
@@ -116,6 +135,13 @@ class Rights extends Controller{
 					exit;
 	            }
 			}
+			try{
+				$UserRights->delete()->Like('page', $comp_name."%")->prepare()->execute();
+			}catch(Exception $e){
+            	echo "SQL Error: ".$e->getMessage();
+            	header('location: '.BASE.'user/rights');
+				exit;
+            }
 			//Remove files
 			self::dlinkFiles(BASE_DIR.DS.COMP_PATH.DS.$comp_name);
 			$_SESSION[SESSION_MSG] = 'Component files deleted successfully!';
