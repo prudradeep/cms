@@ -3,151 +3,230 @@
 *Author:	Pradeep Rajput
 *Email:		prithviraj.rudraksh@gmail.com 
 *Website:	----------
-*Component:	Config
-*Class:		Config
+*Component:	User
+*Class:		Rights
 */
 
 if (! defined('PHINDART')) { die('Access denied'); }
 
-class Config extends Controller{
+class Rights extends Controller{
 
-	function main($page=1){
-		if(isset($_SESSION[SEARCHBY])){
-			unset($_SESSION[SEARCHBY]);
-			unset($_SESSION[SEARCHTXT]);
-			unset($_SESSION[SEARCHOPER]);
-		}
+	function main(){
 		$this->component('menu','navbar','main');
-		$data = $this->helper->model('settings')->select('id','type', 'field', 'value', "if(status=1,'Active','Inactive') as status")->paginate($page, 10)->prepare();
-		$datb = $data->execute()->fetchAll();
-		$Themer = array();
-		foreach ($datb as $key => $value) {
-			$Themer[] = $value->getAll();
+		$UserTypes = $this->helper->model('usertypes')->select('id','name')->Eq('status',1)->prepare()->execute()->fetchAll();
+		$UserRights = $this->helper->model('userrights')->select('usertype', 'page', 'status')->prepare()->execute()->fetchAll();
+		$components = $this->helper->getDir(COMP_PATH);
+		$comps= array();
+		foreach ($components as $key => $value) {
+			foreach ($value['items'][0]['items'] as $k => $v) {
+				$comps[ucfirst($value['name'])][ucfirst($v['name'])]['name'] = ucfirst($v['name']);
+			}
+			if(isset($value['items'][1]) && $value['items'][1]['name']=='install'){
+				$comps[ucfirst($value['name'])]['install'] = $value['items'][1]['install'];
+				$comps[ucfirst($value['name'])]['uninstall'] = false;
+			}
+			else if(isset($value['items'][1]) && $value['items'][1]['name']=='uninstall'){
+				$comps[ucfirst($value['name'])]['install'] = false;
+				$comps[ucfirst($value['name'])]['uninstall'] = $value['items'][1]['install'];
+			}
 		}
-		
-		$Head = ['id'=>'Id','type'=>'Type', 'field'=>'Field', 'value'=>'Value', 'status'=>'Status'];
-		$this->view('theme',['id'=>'id', 'action'=>BASE.$this->component.'/config','json'=>json_encode($Themer), 'page'=>$page]);
-		$this->loadView('master', ['heading'=>'Settings', 'tableHeads'=>$Head, 'data'=>$Themer, 'url'=>'/config', 'id'=>'id', 'pager'=>$data->getPages($page, BASE.$this->component.'/config'), 'page'=>$page]);		
+		$rights = [];
+		foreach ($UserRights as $key => $value) {
+			$rights[$value['page']] = json_decode($value['usertype']);
+			$exp = explode("/",$value['page']);
+			if(isset($exp[1]))
+				$comps[$exp[0]][$exp[1]]['status'] = $value['status'];
+			else
+				$comps[$exp[0]][$exp[0]]['status'] = $value['status'];
+		}
+		$this->view('rights', ['usertypes'=>$UserTypes, 'comps'=>$comps, 'data'=>$rights, 'url'=>'/rights']);
 	}
 
-	function remove($page=1){
-		if(!isset($_POST['id'])){
-			$_SESSION[SESSION_MSG] = $this->helper->errorMessage(103);
-			header('location: '.BASE.$this->component.'/config/'.$page);
+	function submit(){
+		foreach ($_POST as $key => $value) {
+			$data['page'] = $key;
+			$data['pageaccess'] = md5($key);
+			if(array_key_exists("status", $value)){
+				$data['status'] = 1;
+			}else{
+				$data['status'] =0;
+			}
+			unset($value['status']);
+			if(array_key_exists("'all'", $value))
+				$data['usertype'] = json_encode(array('*'));
+			else{
+				$data['usertype'] = '["'.implode('","', array_keys($value)).'"]';
+			}
+			$this->helper->model('userrights')->replace($data)->prepare()->execute();
+		}
+		header('location: '.BASE.'user/rights');
+	}
+
+	function install($comp_name=null){
+		if(isset($_SERVER['HTTP_REFERER']) && $_SERVER['HTTP_REFERER']==BASE."user/rights" && $comp_name!==null){
+			//Check for SQLs
+			$SQLs = json_decode(file_get_contents(BASE_DIR.DS.COMP_PATH.DS.$comp_name.DS.'install.json'))->sqls;
+			$UserRights = $this->helper->model('userrights');
+			//Install SQLs
+			foreach ($SQLs as $key => $value) {
+				$fp = file(BASE_DIR.DS.COMP_PATH.DS.$comp_name.DS.'sql'.DS.$value.'.sql', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+				$query = '';
+				foreach ($fp as $line) {
+				    if ($line != '' && strpos($line, '--') === false) {
+				        $query .= $line;
+				        if (substr($query, -1) == ';') {
+				            try{
+					            $UserRights->sql($query)->prepare()->execute();
+					            $query = '';
+				            }catch(Exception $e){
+				            	$_SESSION[SESSION_MSG] = "SQL Error: ".$e->getMessage();
+				            	header('location: '.BASE.'user/rights');
+								exit;
+				            }
+				        }
+				    }
+				}
+			}
+			rename(BASE_DIR.DS.COMP_PATH.DS.$comp_name.DS.'install.json', BASE_DIR.DS.COMP_PATH.DS.$comp_name.DS.'uninstall.json');
+			$_SESSION[SESSION_MSG] = 'Component installed successfully!';
+			header('location: '.BASE.'user/rights');
 			exit;
-		}
-		try{
-			$this->helper->model('settings')->update(['status'=>0])->Eq('id',$_POST['id'])->prepare()->execute();
-			$_SESSION[SESSION_MSG] = 'Setting inactive successfully!';
-		}catch(Exception $e){
-			$_SESSION[SESSION_MSG] = $e->getMessage();
-		}
-		header('location: '.BASE.$this->component.'/config/'.$page);
-		exit;
-	}
-
-	function search($page=1){
-		if(isset($_POST['search_txt'])){
-			if(!isset($_POST['search_by'])) $sby = 'id';
-			else $sby = $_POST['search_by'];
-			$stxt = $_POST['search_txt'];
-			$_SESSION[SEARCHBY] = $sby;
-			$_SESSION[SEARCHTXT] = $stxt;
-			$oper = $_POST['search_oper'];
-			$_SESSION[SEARCHOPER] = $oper;
-		}else if(isset($_SESSION[SEARCHBY])){
-			$sby = $_SESSION[SEARCHBY];
-			$stxt = $_SESSION[SEARCHTXT];
-			$oper = $_SESSION[SEARCHOPER];
 		}else{
-			header('location: '.BASE.$this->component.'/config/'.$page);
+			$_SESSION[SESSION_MSG] = 'Invalid Request!';
+			header('location: '.BASE.'user/rights');
 			exit;
 		}
-		
-		$this->component('menu','navbar','main');
-		$data = $this->helper->model('settings')->select('id','type', 'field', 'value', "if(status=1,'Active','Inactive') as status")->$oper($sby, $stxt)->paginate($page, 10)->prepare();
-		$datb = $data->execute()->fetchAll();
-		$Themer = array();
-		foreach ($datb as $key => $value) {
-			$Themer[] = $value->getAll();
-		}		
-		$Head = ['id'=>'Id','type'=>'Type', 'field'=>'Field', 'value'=>'Value', 'status'=>'Status'];
-		$this->view('theme',['id'=>'id', 'action'=>BASE.$this->component.'/config','json'=>json_encode($Themer), 'page'=>$page]);
-		$this->loadView('master', ['heading'=>'Settings', 'tableHeads'=>$Head, 'data'=>$Themer, 'url'=>'/config', 'id'=>'id', 'pager'=>$data->getPages($page, BASE.$this->component.'/config/search'), 'page'=>$page]);
 	}
 
-	function insert($page=1){
-		if(!isset($_POST['field'])){
-			$_SESSION[SESSION_MSG] = $this->helper->errorMessage(103);
-			header('location: '.BASE.$this->component.'/config/'.$page);
+	function uninstall($comp_name=null){
+		if(isset($_SERVER['HTTP_REFERER']) && $_SERVER['HTTP_REFERER']==BASE."user/rights" && $comp_name!==null){
+			$UserRights = $this->helper->model('userrights');
+			try{
+				$UserRights->update(['status'=>0])->Like('page', $comp_name."%")->prepare()->execute();
+			}catch(Exception $e){
+            	echo "SQL Error: ".$e->getMessage();
+            	header('location: '.BASE.'user/rights');
+				exit;
+            }
+			rename(BASE_DIR.DS.COMP_PATH.DS.$comp_name.DS.'uninstall.json', BASE_DIR.DS.COMP_PATH.DS.$comp_name.DS.'install.json');
+			$_SESSION[SESSION_MSG] = 'Component uninstalled successfully!';
+			header('location: '.BASE.'user/rights');
+			exit;
+		}else{
+			$_SESSION[SESSION_MSG] = 'Invalid Request!';
+			header('location: '.BASE.'user/rights');
 			exit;
 		}
-		if(empty($_POST['id']))
-			unset($_POST['id']);
-		try{
-			$this->helper->model('settings')->create($_POST)->prepare()->execute();
-			$_SESSION[SESSION_MSG] = 'Config added successfully!';
-		}catch(Exception $e){
-			$_SESSION[SESSION_MSG] = $e->getMessage();
-		}
-		header('location: '.BASE.$this->component.'/config/'.$page);
-		exit;
 	}
-
-	function update($page=1){
-		if(!isset($_POST['field'])){
-			$_SESSION[SESSION_MSG] = $this->helper->errorMessage(103);
-			header('location: '.BASE.$this->component.'/config/'.$page);
+	function remove($comp_name=null){
+		if(isset($_SERVER['HTTP_REFERER']) && $_SERVER['HTTP_REFERER']==BASE."user/rights" && $comp_name!==null){
+			//Check for SQLs
+			$SQLs = json_decode(file_get_contents(BASE_DIR.DS.COMP_PATH.DS.$comp_name.DS.'install.json'))->sqls;
+			$UserRights = $this->helper->model('userrights');
+			//Remove SQLs
+			$SQLs = array_reverse($SQLs);
+			foreach ($SQLs as $key => $value) {
+	            $query = "DROP TABLE IF EXISTS ".$value;
+	            try{
+		            $UserRights->sql($query)->prepare()->execute();
+	            }catch(Exception $e){
+	            	$_SESSION[SESSION_MSG] = "SQL Error: ".$e->getMessage();
+	            	header('location: '.BASE.'user/rights');
+					exit;
+	            }
+			}
+			try{
+				$UserRights->delete()->Like('page', $comp_name."%")->prepare()->execute();
+			}catch(Exception $e){
+            	echo "SQL Error: ".$e->getMessage();
+            	header('location: '.BASE.'user/rights');
+				exit;
+            }
+			//Remove files
+			self::dlinkFiles(BASE_DIR.DS.COMP_PATH.DS.$comp_name);
+			$_SESSION[SESSION_MSG] = 'Component files deleted successfully!';
+			header('location: '.BASE.'user/rights');
+			exit;
+		}else{
+			$_SESSION[SESSION_MSG] = 'Invalid Request!';
+			header('location: '.BASE.'user/rights');
 			exit;
 		}
-		$data['type'] = $_POST['type'];
-		$data['field'] = $_POST['field'];
-		$data['value'] = $_POST['value'];
-		$data['status'] = $_POST['status'];
-		try{
-			$this->helper->model('settings')->update($data)->Eq('id',$_POST['id'])->prepare()->execute();
-			$_SESSION[SESSION_MSG] = 'Config updated successfully!';
-		}catch(Exception $e){
-			$_SESSION[SESSION_MSG] = $e->getMessage();
-		}
-		header('location: '.BASE.$this->component.'/config/'.$page);
-		exit;
-	}
-
-	function download(){
-		ob_clean();
-		$fp = fopen('php://output', 'w');
-		header('Content-type: application/csv');
-		header('Content-Disposition: attachment; filename=Config.csv');
-		if(!isset($_SESSION[SEARCHBY]))
-			$Prerequisites =  $this->helper->model('settings')->select('id','type', 'field', 'value', "if(status=1,'Active','Inactive') as status")->prepare()->execute();
-		else{
-			$sby = $_SESSION[SEARCHBY];
-			$stxt = $_SESSION[SEARCHTXT];
-			$oper = $_SESSION[SEARCHOPER];
-			$Prerequisites =  $this->helper->model('settings')->select('id','type', 'field', 'value', "if(status=1,'Active','Inactive') as status")->$oper($sby, $stxt)->prepare()->execute();
-		}
-		$Head = ['id'=>'Id','type'=>'Type', 'field'=>'Field', 'value'=>'Value', 'status'=>'Status'];
-		fputcsv($fp, $Head);
-		foreach ($Prerequisites as $key => $value) {
-			fputcsv($fp, $value->getAll());
-		}
-		exit;
-	}
-
-	function format(){
-		ob_clean();
-		$fp = fopen('php://output', 'w');
-		header('Content-type: application/csv');
-		header('Content-Disposition: attachment; filename=Config.csv');
-		$Head = ['type'=>'Type', 'field'=>'Field', 'value'=>'Value', 'status'=>'Status'];
-		fputcsv($fp, $Head);
-		exit;
 	}
 
 	function upload(){
-		print_r($_FILES);
-		print_r($_POST);
+		if ($_FILES['upload_file']['size'] > 0) {			
+			
+			/* Upload file to tmp directory. */
+			$targetFile = 'tmp/'.$_FILES['upload_file']['name'];
+			$filename = $_FILES['upload_file']['name'];
+			if(file_exists($targetFile))
+				unlink($targetFile);
+			move_uploaded_file($_FILES["upload_file"]["tmp_name"], $targetFile);
+			
+			/* Get absolute path of uploaded file. */
+			$path = dirname(dirname(__FILE__));
+			$targetFile = BASE_DIR.DS.$targetFile;
+
+			$ext = pathinfo($targetFile, PATHINFO_EXTENSION);
+			if($ext==='zip'){
+				$zip = new ZipArchive;
+				/*Read component information.*/
+				$install = json_decode(file_get_contents("zip://$targetFile#install.json"));
+				if ($zip->open($targetFile) === TRUE) {
+				    /*Extract files*/
+				    if(!file_exists(BASE_DIR.DS.COMP_PATH.DS.$install->comp_name)){
+				    	self::extFiles($zip, $install, $targetFile);
+						/*Install component and SQLs*/
+						self::install($install->comp_name);
+				    }else if(file_exists(BASE_DIR.DS.COMP_PATH.DS.$install->comp_name.DS."install.json")){
+				    	self::dlinkFiles(BASE_DIR.DS.COMP_PATH.DS.$install->comp_name);
+				    	self::extFiles($zip, $install, $targetFile);
+						/*Install component and SQLs*/
+						self::install($install->comp_name);
+				    }else if(file_exists(BASE_DIR.DS.COMP_PATH.DS.$install->comp_name.DS."uninstall.json")){
+				    	$uninstall = json_decode(file_get_contents(BASE_DIR.DS.COMP_PATH.DS.$install->comp_name.DS."uninstall.json"));
+				    	/*Compare version*/
+				    	if($uninstall->version < $install->version){
+				    		//Update files.
+				    		self::dlinkFiles(BASE_DIR.DS.COMP_PATH.DS.$install->comp_name);
+				    		self::extFiles($zip, $install, $targetFile);
+				    		rename(BASE_DIR.DS.COMP_PATH.DS.$install->comp_name.DS.'install.json', BASE_DIR.DS.COMP_PATH.DS.$install->comp_name.DS.'uninstall.json');
+				    		$_SESSION[SESSION_MSG] = 'Component updated successfully!';
+							header('location: '.BASE.'user/rights');
+							exit;
+				    	}else if($uninstall->version > $install->version){
+				    		$_SESSION[SESSION_MSG] = 'Component version is old!';
+							header('location: '.BASE.'user/rights');
+							exit;
+				    	}else{
+				    		$_SESSION[SESSION_MSG] = 'Component already exists!';
+							header('location: '.BASE.'user/rights');
+							exit;
+				    	}
+				    }
+				}
+			}
+			
+		}
 	}
 
+	private function extFiles($zip=null, $install=null, $targetFile=null){
+		if($zip==null || $install==null || $targetFile==null)
+			return;
+		mkdir(BASE_DIR.DS.COMP_PATH.DS.$install->comp_name);
+    	$zip->extractTo(BASE_DIR.DS.COMP_PATH.DS.$install->comp_name.DS);
+    	$zip->close();
+		unlink($targetFile);
+	}
+
+	private function dlinkFiles($path=null){
+		if($path==null)
+			return;
+		if (PHP_OS === 'WINNT'){
+		    exec(sprintf("rd /s /q %s", escapeshellarg($path)));
+		}else{
+		    exec(sprintf("rm -rf %s", escapeshellarg($path)));
+		}
+	}
 }
