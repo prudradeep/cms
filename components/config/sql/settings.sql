@@ -15,14 +15,14 @@ CREATE TABLE IF NOT EXISTS `settings` (
 REPLACE INTO `settings` (`type`,`field`,`value`,`status`) VALUES
  ('global','SESSION_LIFE','1800',1),
  ('global','MAX_EXE_TIME','300',1),
--- DEVELOPMENT, PRODUCTION, MAINTENANCE
+-- DEVELOPMENT, PRODUCTION
  ('global','MODE','DEVELOPMENT',1),
  ('global','THEME','materialize',1),
  ('site','language','en',1),
  ('js_plugs','Jquery','jquery-3.2.1.min',1),
  ('font_plugs','Material Icon','material-icons/material-icons',1),
- ('global','SESSION_KEY','framework_user',1),
- ('global','SESSION_USER','framework_usertype',1),
+ ('global','SESSION_KEY','phindart_user',1),
+ ('global','SESSION_USER','phindart_usertype',1),
  ('global','SESSION_MSG','sess_msg',1),
  ('global','SEARCHBY','search_by',1),
  ('global','SEARCHTXT','search_txt',1),
