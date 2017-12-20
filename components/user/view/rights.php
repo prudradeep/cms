@@ -39,29 +39,32 @@ p{margin: 0;}
            echo "<th>$value[name]</th>";
         }
         ?>
+        <th>Status</th>
         <th>-</th>
     </tr>
   </thead>
   <tbody>
       <?php
+        $ucs = count($data['usertypes'])+2;
         foreach ($data['comps'] as $key => $value) {
-           foreach ($value as $k => $v) {
-               if($k==="install" || $k==="uninstall")
+          $z=0;
+          foreach ($value as $k => $v) {
+              if($k==="install" || $k==="uninstall")
                 continue;
-               $all='';
-               $dis='';
-                if($key==$v)
-                  $name = $key;
-                else
-                  $name = $key."/".$v;
-               if(isset($data['data']["$name"]) && $data['data']["$name"][0]=="*"){
-                  $all='checked';
-                  $dis='disabled';
-               }
-              echo <<<HTML
+              $all='';
+              $dis='';
+              $cs = count($value)-2;
+              if($key==$k)
+                $name = $key;
+              else
+                $name = $key."/".$v['name'];
+              if(isset($data['data']["$name"]) && $data['data']["$name"][0]=="*"){
+                $all='checked';
+                $dis='disabled';
+             }
+            echo <<<HTML
 <tr><td>$name</td>
 HTML;
-$cs = count($value)-2;
 if($value['uninstall']){
   echo <<<HTML
 <td>
@@ -84,7 +87,7 @@ HTML;
   }
 }else if($k==0){
   echo <<<HTML
-<td rowspan='{$cs}' colspan='7' class="center-align">
+<td rowspan='{$cs}' colspan='{$ucs}' class="center-align">
 <a href="{$url}/rights/install/{$value['install']->comp_name}" class="btn green waves-effect waves-light"> Install
 <i class="large material-icons left">library_add</i>
 </a>
@@ -94,25 +97,53 @@ HTML;
 </td>
 HTML;
 }
-if($value['uninstall'] && $k==0){
+if(isset($value['uninstall']->removable)){
+echo "<td>";
+$status_check = (isset($v['status']) && $v['status']===1)?'checked':'';
+if($value['uninstall']->removable){
+  echo <<<HTML
+<div class="switch">
+    <label>
+      Disabled
+      <input type="checkbox" name="{$name}[status]" {$status_check}/>
+      <span class="lever"></span>
+      Enabled
+    </label>
+</div>
+HTML;
+}else{
+  echo <<<HTML
+<input type="hidden" name="{$name}[status]" value="on"/>
+<div class="switch">
+    <label>
+      Disabled
+      <input type="checkbox" disabled {$status_check}/>
+      <span class="lever"></span>
+      Enabled
+    </label>
+</div>
+HTML;
+}
+echo "</td>";
+}
+if($value['uninstall'] && $z==0){
   if(!$value['uninstall']->removable){
     echo <<<HTML
-<td rowspan='$cs' class='center-align'>
-<i class='blue-text material-icons'>check_circle</i>
+<td rowspan='$cs' class='left-align'>
 <a href="#" class="tooltipped" data-position="bottom" data-delay="50" data-tooltip="{$value['uninstall']->name}, Ver:{$value['uninstall']->version}"><i class="material-icons">info_outline</i></a>
 </td>
 HTML;
   }else{
     echo <<<HTML
-<td rowspan='{$cs}' class='center-align'>
+<td rowspan='{$cs}' class='left-align'>
+<a href="#" class="tooltipped" data-position="bottom" data-delay="50" data-tooltip="{$value['uninstall']->name}, Ver:{$value['uninstall']->version}"><i class="material-icons">info_outline</i></a>
 <a href="{$url}/rights/uninstall/{$value['uninstall']->comp_name}" >
 <i class="red-text material-icons">delete</i>
 </a>
-<a href="#" class="tooltipped" data-position="bottom" data-delay="50" data-tooltip="{$value['uninstall']->name}, Ver:{$value['uninstall']->version}"><i class="material-icons">info_outline</i></a>
 </td>
 HTML;
   }
-}else if($value['install'] && $k==0){
+}else if($value['install'] && $z==0){
   echo <<<HTML
 <td rowspan='{$cs}' class='center-align'>
 {$value['install']->name}<br />
@@ -121,7 +152,8 @@ Ver: {$value['install']->version}
 HTML;
 }
 echo "</tr>";
-           }
+          $z++;
+          }
         }
         ?>
   </tbody>
