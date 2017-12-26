@@ -34,7 +34,7 @@
         fwrite($cFile, $htaccess);
         fclose($cFile);
 
-        $config = sprintf(file_get_contents('./install/config.tmp'),$_POST['db_host'],$_POST['db_port'],$_POST['db_user'],$_POST['db_pass'],$_POST['db_base']);
+        $config = sprintf(file_get_contents('./install/config.tmp'),$_POST['db_host'],$_POST['db_port'],$_POST['db_user'],$_POST['db_pass'],$_POST['db_base'],$_POST['db_prefix']);
         $cFile = fopen('./config.php', 'w');
         fwrite($cFile, $config);
         fclose($cFile);
@@ -137,6 +137,12 @@
                             <input id="db_base" type="text" name="db_base" required>
                             <label for="db_base">DB Name</label>
                             <p class="red-text" id="note"></p>
+                         </div>
+                      </div>
+                      <div class="row">
+                         <div class="input-field col m12">
+                            <input id="db_prefix" type="text" name="db_prefix">
+                            <label for="db_prefix">DB Prefix</label>
                          </div>
                       </div>
                 </div>
