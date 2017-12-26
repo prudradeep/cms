@@ -15,5 +15,6 @@ $userConfig=array(
 	'DB_PORT'=>%d,
 	'DB_USER'=>'%s', //Not Required if sqlite
 	'DB_PASS'=>'%s', //Not Required if sqlite,
-	'DB_BASE'=>'%s'
+	'DB_BASE'=>'%s',
+	'DB_PREFIX'=>'%s'
 );
