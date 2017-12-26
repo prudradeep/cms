@@ -25,9 +25,9 @@ class Query extends Prepare{
 		global $Helper;
 		$this->helper = $Helper;
 		if($this->table==NULL && $this::$dynatable!=NULL){ //Model class not exist check
-			$this->table = $this::$dynatable;
+			$this->table = DB_PREFIX.$this::$dynatable;
 		}else if($this->table==NULL){
-			$this->table = strtolower(get_class($this));
+			$this->table = DB_PREFIX.strtolower(get_class($this));
 		}
 		if($this->fetchMode==NULL){
 			$this->fetchMode = PDO::FETCH_ASSOC;
