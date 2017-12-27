@@ -150,7 +150,8 @@ class Controller{
 			$access = md5(ucfirst($comp).'/'.ucfirst($ctrl));
 		$user = $_SESSION[SESSION_USER];
 		$UserRights=$this->helper->model('userrights');
-		$isaccess = $UserRights->sql("SELECT * FROM userrights WHERE pageaccess='$access' AND status=1 AND (JSON_SEARCH(usertype, 'one', $user) IS NOT NULL OR JSON_SEARCH(usertype, 'one', '*') IS NOT NULL)")->prepare()->execute();
+		$prefix=DB_PREFIX;
+		$isaccess = $UserRights->sql("SELECT * FROM {$prefix}userrights WHERE pageaccess='$access' AND status=1 AND (JSON_SEARCH(usertype, 'one', $user) IS NOT NULL OR JSON_SEARCH(usertype, 'one', '*') IS NOT NULL)")->prepare()->execute();
 		if($isaccess->rowCount()<=0)
 			return false;
 		else
