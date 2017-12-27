@@ -64,6 +64,9 @@ class Rights extends Controller{
 
 	function install($comp_name=null){
 		if(isset($_SERVER['HTTP_REFERER']) && $_SERVER['HTTP_REFERER']==BASE."user/rights" && $comp_name!==null){
+			$cre = '/(.*)(TEMPORARY |TABLE |IF NOT EXISTS )`?([\w]*)`?/';
+			$ire = '/(.*)INTO ([\w].*)/';
+			$prefix = DB_PREFIX;
 			//Check for SQLs
 			$SQLs = json_decode(file_get_contents(BASE_DIR.DS.COMP_PATH.DS.$comp_name.DS.'install.json'))->sqls;
 			$UserRights = $this->helper->model('userrights');
@@ -76,7 +79,15 @@ class Rights extends Controller{
 				        $query .= $line;
 				        if (substr($query, -1) == ';') {
 				            try{
-					            $UserRights->sql($query)->prepare()->execute();
+					            //Create
+						    $create = preg_match_all($cre, $query);
+						    if($create==1)
+					            	$query = preg_replace($cre, "$1$2$prefix$3", $query);
+						    //Insert|Replace
+						    $insert = preg_match_all($ire, $query);
+						    if($insert==1)
+						    	$query = preg_replace($ire, "$1$prefix$2", $query);
+						    $UserRights->sql($query)->prepare()->execute();
 					            $query = '';
 				            }catch(Exception $e){
 				            	$_SESSION[SESSION_MSG] = "SQL Error: ".$e->getMessage();
@@ -126,7 +137,7 @@ class Rights extends Controller{
 			//Remove SQLs
 			$SQLs = array_reverse($SQLs);
 			foreach ($SQLs as $key => $value) {
-	            $query = "DROP TABLE IF EXISTS ".$value;
+	            $query = "DROP TABLE IF EXISTS ".DB_PREFIX.$value;
 	            try{
 		            $UserRights->sql($query)->prepare()->execute();
 	            }catch(Exception $e){
