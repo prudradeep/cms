@@ -32,6 +32,9 @@ class Home extends Controller{
 
 	private function install($comp_name=null){
 		$base=$_SESSION['install']['base'];
+		$cre = '/(.*)(TEMPORARY |TABLE |IF NOT EXISTS )`?([\w]*)`?/';
+		$ire = '/(.*)INTO ([\w].*)/';
+		$prefix = DB_PREFIX;
 		if($comp_name!==null){
 			//Check for SQLs
 			if(file_exists(BASE_DIR.DS.COMP_PATH.DS.$comp_name.DS.'install.json'))
@@ -48,7 +51,15 @@ class Home extends Controller{
 				        $query .= $line;
 				        if (substr($query, -1) == ';') {
 				            try{
-					            $UserRights->sql($query)->prepare()->execute();
+						    //Create
+						    $create = preg_match_all($cre, $query);
+						    if($create==1)
+					            	$query = preg_replace($cre, "$1$2$prefix$3", $query);
+						    //Insert|Replace
+						    $insert = preg_match_all($ire, $query);
+						    if($insert==1)
+						    	$query = preg_replace($ire, "$1$prefix$2", $query);
+						    $UserRights->sql($query)->prepare()->execute();
 					            $query = '';
 				            }catch(Exception $e){
 				            	echo "SQL Error: ".$e->getMessage();
