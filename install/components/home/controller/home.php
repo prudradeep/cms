@@ -33,7 +33,8 @@ class Home extends Controller{
 	private function install($comp_name=null){
 		$base=$_SESSION['install']['base'];
 		$cre = '/(.*)(TEMPORARY |TABLE |IF NOT EXISTS )`?([\w]*)`?/';
-		$ire = '/(.*)INTO ([\w].*)/';
+		$ref = '/(REFERENCES `?)([\w]+`?)/';
+		$ire = '/(.*INTO `?)([\w].*)/';
 		$prefix = DB_PREFIX;
 		if($comp_name!==null){
 			//Check for SQLs
@@ -50,17 +51,21 @@ class Home extends Controller{
 				    if ($line != '' && strpos($line, '--') === false) {
 				        $query .= $line;
 				        if (substr($query, -1) == ';') {
-				            try{
-						    //Create
-						    $create = preg_match_all($cre, $query);
-						    if($create==1)
-					            	$query = preg_replace($cre, "$1$2$prefix$3", $query);
-						    //Insert|Replace
-						    $insert = preg_match_all($ire, $query);
-						    if($insert==1)
-						    	$query = preg_replace($ire, "$1$prefix$2", $query);
-						    $UserRights->sql($query)->prepare()->execute();
-					            $query = '';
+				            try{						    
+					        //Create
+						$create = preg_match_all($cre, $query);
+						if($create==1)
+					        	$query = preg_replace($cre, "$1$2$prefix$3", $query);
+					        //References
+						$refer = preg_match_all($ref, $query);
+						if($refer==1)
+					        	$query = preg_replace($ref, "$1$prefix$2", $query);
+						//Insert|Replace
+						$insert = preg_match_all($ire, $query);
+						if($insert==1)
+							$query = preg_replace($ire, "$1$prefix$2", $query);
+						$UserRights->sql($query)->prepare()->execute();
+					        $query = '';
 				            }catch(Exception $e){
 				            	echo "SQL Error: ".$e->getMessage();
 				            }
