@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS `settings` (
   `field` char(100) NOT NULL,
   `value` text NOT NULL,
   `status` tinyint(4) NOT NULL DEFAULT '1',
-  `updated_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00' ON UPDATE CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `type` (`type`),
