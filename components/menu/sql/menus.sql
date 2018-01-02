@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS `menus` (
   `display_name` varchar(100) NOT NULL,
   `link` char(150) NOT NULL,
   `user_access` varchar(150) NOT NULL COMMENT 'User types',
-  `updated_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00' ON UPDATE CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniqueness` (`parent`,`name`,`type`, `link`),
